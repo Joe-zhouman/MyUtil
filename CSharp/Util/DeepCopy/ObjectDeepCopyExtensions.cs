@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -10,7 +11,7 @@ namespace Util.DeepCopy {
         private static readonly MethodInfo CloneMethod =
             typeof(object).GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        public static bool IsPrimitive(this Type type) {
+        public static bool IsPrimitive(this Type? type) {
             if (type == typeof(string)) return true;
             return type.IsValueType & type.IsPrimitive;
         }
@@ -20,7 +21,6 @@ namespace Util.DeepCopy {
         }
 
         private static object InternalCopy(object sourceObject, IDictionary<object, object> visited) {
-            if (sourceObject == null) return null;
             Type typeToReflect = sourceObject.GetType();
             if (IsPrimitive(typeToReflect)) return sourceObject;
             if (visited.ContainsKey(sourceObject)) return visited[sourceObject];
@@ -29,9 +29,11 @@ namespace Util.DeepCopy {
             if (typeToReflect.IsArray) {
                 Type? arrayType = typeToReflect.GetElementType();
                 if (IsPrimitive(arrayType) == false) {
-                    Array clonedArray = (Array) targetObject;
-                    clonedArray.ForEach((array, indices) =>
-                        array.SetValue(InternalCopy(clonedArray.GetValue(indices), visited), indices));
+                    Array? clonedArray = (Array) targetObject;
+                    clonedArray.ForEach((array, indices) => {
+                        if (clonedArray != null)
+                            array.SetValue(InternalCopy(clonedArray.GetValue(indices), visited), indices);
+                    });
                 }
             }
 
@@ -69,6 +71,10 @@ namespace Util.DeepCopy {
         /// <param name="source">source object</param>
         /// <returns></returns>
         public static T MemberwiseCopy<T>(this T source) {
+            if (source is null)
+            {
+                return source;
+            }
             return (T)MemberwiseCopy((object) source);
         }
 
@@ -79,6 +85,9 @@ namespace Util.DeepCopy {
         /// <param name="source">source object</param>
         /// <returns></returns>
         public static T DeepCopy<T>(this T source) {
+            if (source is null) {
+                return source;
+            }
             using MemoryStream stream = new MemoryStream();
             BinaryFormatter formatter = new BinaryFormatter();
             formatter.Serialize(stream, source);
@@ -93,7 +102,6 @@ namespace Util.DeepCopy {
         }
 
         public override int GetHashCode(object obj) {
-            if (obj == null) return 0;
             return obj.GetHashCode();
         }
     }
